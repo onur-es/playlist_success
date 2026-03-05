@@ -142,10 +142,18 @@ code, .stCode, div[data-testid="stMetric"] label {
     font-family: 'IBM Plex Mono', monospace !important;
 }
 
+/* App background */
+.stApp, [data-testid="stAppViewContainer"] {
+    background-color: #121212 !important;
+}
+.stMainBlockContainer, [data-testid="stMain"] {
+    background-color: #121212 !important;
+}
+
 /* Metric cards */
 div[data-testid="stMetric"] {
-    background: #161b22;
-    border: 1px solid #21262d;
+    background: #181818;
+    border: 1px solid #282828;
     border-radius: 12px;
     padding: 20px;
 }
@@ -154,7 +162,7 @@ div[data-testid="stMetric"] label {
     font-size: 0.7rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.08em !important;
-    color: #8b949e !important;
+    color: #a7a7a7 !important;
 }
 
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {
@@ -165,7 +173,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
 
 /* Header area */
 .hero-subtitle {
-    color: #8b949e;
+    color: #a7a7a7;
     font-size: 1rem;
     font-weight: 300;
     margin-top: -8px;
@@ -174,8 +182,8 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
 
 /* Detail card */
 .detail-header {
-    background: #161b22;
-    border: 1px solid #21262d;
+    background: #181818;
+    border: 1px solid #282828;
     border-radius: 12px;
     padding: 20px 24px;
     display: flex;
@@ -187,7 +195,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
 .detail-uri {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
-    color: #8b949e;
+    color: #a7a7a7;
     word-break: break-all;
 }
 
@@ -203,15 +211,15 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     margin-left: 8px;
 }
 
-.pill-green { background: #1a3a2a; color: #3fb950; border: 1px solid #23883a; }
+.pill-green { background: #1a3a2a; color: #1DB954; border: 1px solid #1DB954; }
 .pill-red { background: #3a1a1a; color: #f85149; border: 1px solid #88232a; }
 .pill-blue { background: #1a2a3a; color: #58a6ff; border: 1px solid #1f6feb; }
-.pill-gray { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+.pill-gray { background: #282828; color: #a7a7a7; border: 1px solid #383838; }
 
 /* AI explanation box */
 .ai-explanation {
-    background: linear-gradient(135deg, #161b22 0%, #1a2332 100%);
-    border: 1px solid #21262d;
+    background: linear-gradient(135deg, #181818 0%, #1a2420 100%);
+    border: 1px solid #282828;
     border-left: 3px solid #1DB954;
     border-radius: 12px;
     padding: 24px 28px;
@@ -271,14 +279,14 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #484f58;
+    color: #535353;
     margin-bottom: 4px;
 }
 
 /* Sidebar polish */
 section[data-testid="stSidebar"] {
-    background-color: #0d1117 !important;
-    border-right: 1px solid #21262d !important;
+    background-color: #0b0b0b !important;
+    border-right: 1px solid #282828 !important;
 }
 
 /* Tab styling */
@@ -339,17 +347,17 @@ button[data-baseweb="tab"] {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 0.72rem !important;
     letter-spacing: 0.04em !important;
-    border: 1px solid #30363d !important;
+    border: 1px solid #383838 !important;
     border-radius: 8px !important;
     padding: 6px 18px !important;
-    color: #c9d1d9 !important;
-    background: #161b22 !important;
+    color: #b3b3b3 !important;
+    background: #181818 !important;
     transition: all 0.15s ease !important;
 }
 .stButton > button[kind="secondary"]:hover:not(:disabled) {
     border-color: #1DB954 !important;
     color: #1DB954 !important;
-    background: #0d1117 !important;
+    background: #121212 !important;
 }
 .stButton > button[kind="secondary"]:disabled {
     opacity: 0.3 !important;
@@ -363,7 +371,7 @@ PLOTLY_LAYOUT = dict(
     template="plotly_dark",
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Sora, sans-serif", color="#8b949e"),
+    font=dict(family="Sora, sans-serif", color="#a7a7a7"),
 )
 
 
@@ -372,7 +380,7 @@ st.markdown('<p class="section-label">MODEL EXPLAINABILITY</p>', unsafe_allow_ht
 st.title("Playlist X-Ray")
 st.markdown(
     '<p class="hero-subtitle">'
-    "Understand what drives playlist success — powered by SHAP and Claude AI"
+    "Understand what drives playlist success — powered by SHAP and Claude"
     "</p>",
     unsafe_allow_html=True,
 )
@@ -402,7 +410,7 @@ with st.sidebar:
     st.markdown("---")
     st.metric("Matching playlists", f"{total:,}")
     st.markdown("---")
-    st.caption("Built with Streamlit, DuckDB & Claude AI")
+    st.caption("Built with Streamlit and Claude")
 
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
@@ -458,15 +466,23 @@ with tab_explore:
 
         # ── Clickable table ───────────────────────────────────────────
         display_df = playlists.copy()
-        display_df["P(Success)"] = display_df["pred_proba"].apply(lambda x: f"{x:.1%}")
-        display_df["Pred"] = display_df["pred_label"].map({1: "✓ Success", 0: "✗ Fail"})
+        display_df["P(Success)"] = display_df["pred_proba"] * 100  # 0-100 for ProgressColumn
+        display_df["Predicted"] = display_df["pred_label"].map({1: "✓ Success", 0: "✗ Fail"})
         display_df["URI"] = display_df["playlist_uri"].str[-22:]
-        display_df = display_df[["row_id", "URI", "P(Success)", "Pred", "owner_type", "mau"]]
-        display_df.columns = ["ID", "URI (tail)", "P(Success)", "Predicted", "Owner", "MAU"]
+        display_df = display_df[["URI", "P(Success)", "Predicted", "owner_type", "mau"]]
+        display_df.columns = ["URI", "P(Success)", "Predicted", "Owner", "MAU"]
 
         st.markdown('<p class="table-hint"><span style="font-size:1.3em">☑</span> Select the checkbox next to a playlist to inspect it</p>', unsafe_allow_html=True)
         event = st.dataframe(
             display_df,
+            column_config={
+                "P(Success)": st.column_config.ProgressColumn(
+                    "P(Success)",
+                    format="%.1f%%",
+                    min_value=0,
+                    max_value=100,
+                ),
+            },
             use_container_width=True,
             height=400,
             hide_index=True,
@@ -671,7 +687,7 @@ with tab_global:
         orientation="h",
         marker=dict(
             color=importance["pct"],
-            colorscale=[[0, "#21262d"], [0.3, "#1a5c34"], [1, "#1DB954"]],
+            colorscale=[[0, "#282828"], [0.3, "#1a5c34"], [1, "#1DB954"]],
         ),
         text=importance["pct"].apply(lambda v: f"{v:.1f}%"),
         textposition="outside",
