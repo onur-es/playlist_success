@@ -464,7 +464,7 @@ with tab_explore:
         display_df = display_df[["row_id", "URI", "P(Success)", "Pred", "owner_type", "mau"]]
         display_df.columns = ["ID", "URI (tail)", "P(Success)", "Predicted", "Owner", "MAU"]
 
-        st.markdown('<p class="table-hint">Click a row to inspect it</p>', unsafe_allow_html=True)
+        st.markdown('<p class="table-hint"><span style="font-size:1.3em">☑</span> Select the checkbox next to a playlist to inspect it</p>', unsafe_allow_html=True)
         event = st.dataframe(
             display_df,
             use_container_width=True,
