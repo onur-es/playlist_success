@@ -15,7 +15,6 @@ from utils.explainer import get_explanation
 from utils.explorer import (
     EXPLORER_PAGE_SIZE,
     clamp_page,
-    format_playlist_option,
     get_dashboard_tabs,
     get_page_offset,
     get_total_pages,
@@ -302,6 +301,59 @@ button[data-baseweb="tab"] {
 .stButton > button[kind="primary"]:hover {
     background-color: #1ed760 !important;
 }
+
+/* Pagination bar */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 0;
+    margin: 4px 0 12px 0;
+}
+.pagination-bar .page-info {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: #8b949e;
+    letter-spacing: 0.03em;
+    min-width: 140px;
+    text-align: center;
+}
+.pagination-bar .page-info strong {
+    color: #e6edf3;
+    font-weight: 600;
+}
+
+/* Row-click hint */
+.table-hint {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: #484f58;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+/* Pagination buttons */
+.stButton > button[kind="secondary"] {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.04em !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    padding: 6px 18px !important;
+    color: #c9d1d9 !important;
+    background: #161b22 !important;
+    transition: all 0.15s ease !important;
+}
+.stButton > button[kind="secondary"]:hover:not(:disabled) {
+    border-color: #1DB954 !important;
+    color: #1DB954 !important;
+    background: #0d1117 !important;
+}
+.stButton > button[kind="secondary"]:disabled {
+    opacity: 0.3 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -382,59 +434,49 @@ with tab_explore:
     if playlists.empty:
         st.info("No playlists match the current filters.")
     else:
-        controls_left, controls_right = st.columns([1, 3])
-        next_page = controls_left.number_input(
-            "Page",
-            min_value=1,
-            max_value=total_pages,
-            value=current_page,
-            step=1,
-            key="explorer_page_input",
-        )
-        if next_page != current_page:
-            st.session_state["explorer_page"] = next_page
-            st.rerun()
-
         page_start = offset + 1
         page_end = min(offset + EXPLORER_PAGE_SIZE, total)
-        controls_right.caption(
-            f"Showing playlists {page_start:,}-{page_end:,} of {total:,} matches"
-        )
 
-        # Compact display table — truncate URIs for readability
+        # ── Pagination bar ────────────────────────────────────────────
+        pg_left, pg_mid, pg_right = st.columns([1, 2, 1])
+        with pg_left:
+            if st.button("← Prev", disabled=(current_page <= 1), key="pg_prev", use_container_width=True):
+                st.session_state["explorer_page"] = current_page - 1
+                st.rerun()
+        with pg_mid:
+            st.markdown(
+                f'<div class="pagination-bar">'
+                f'<span class="page-info">Page <strong>{current_page}</strong> of <strong>{total_pages:,}</strong>'
+                f' &nbsp;·&nbsp; {page_start:,}–{page_end:,} of {total:,}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        with pg_right:
+            if st.button("Next →", disabled=(current_page >= total_pages), key="pg_next", use_container_width=True):
+                st.session_state["explorer_page"] = current_page + 1
+                st.rerun()
+
+        # ── Clickable table ───────────────────────────────────────────
         display_df = playlists.copy()
         display_df["P(Success)"] = display_df["pred_proba"].apply(lambda x: f"{x:.1%}")
-        display_df["Pred"] = display_df["pred_label"].map({1: "Success", 0: "Fail"})
-        display_df["URI"] = display_df["playlist_uri"].str[-20:]
+        display_df["Pred"] = display_df["pred_label"].map({1: "✓ Success", 0: "✗ Fail"})
+        display_df["URI"] = display_df["playlist_uri"].str[-22:]
         display_df = display_df[["row_id", "URI", "P(Success)", "Pred", "owner_type", "mau"]]
-        display_df.columns = ["ID", "URI (last 20)", "P(Success)", "Predicted", "Owner", "MAU"]
+        display_df.columns = ["ID", "URI (tail)", "P(Success)", "Predicted", "Owner", "MAU"]
 
-        st.caption("Browse the current page, then use the picker below to open one playlist explicitly.")
-        st.dataframe(
+        st.markdown('<p class="table-hint">Click a row to inspect it</p>', unsafe_allow_html=True)
+        event = st.dataframe(
             display_df,
             use_container_width=True,
-            height=320,
+            height=400,
             hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
         )
 
-        playlist_options = playlists.to_dict("records")
-        playlist_lookup = {
-            str(row["row_id"]): row
-            for row in playlist_options
-        }
-        page_option_ids = list(playlist_lookup)
-
-        if st.session_state.get("selected_playlist_id") not in page_option_ids:
-            st.session_state["selected_playlist_id"] = None
-
-        selected_id = st.selectbox(
-            "Open playlist from this page",
-            options=page_option_ids,
-            format_func=lambda row_id: format_playlist_option(playlist_lookup[row_id]),
-            index=None,
-            placeholder="Choose a playlist to inspect",
-            key="selected_playlist_id",
-        )
+        # Determine selected playlist from row click
+        selected_rows = event.selection.rows if event.selection else []
+        selected_id = str(playlists.iloc[selected_rows[0]]["row_id"]) if selected_rows else None
 
         # ── Playlist detail ──────────────────────────────────────────────
         if selected_id:
