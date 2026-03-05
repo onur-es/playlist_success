@@ -11,7 +11,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
     "optuna>=4.7.0",
-    "pandas>=3.0.1",
+    "pandas>=2.0.0",
     "pyarrow>=23.0.1",
     "python-dotenv>=1.2.2",
     "scikit-learn>=1.8.0",
@@ -19,4 +19,8 @@ dependencies = [
     "shap>=0.50.0",
     "spotipy>=2.25.2",
     "xgboost>=3.2.0",
+    "anthropic>=0.40.0",
+    "duckdb>=1.0.0",
+    "plotly>=5.18.0",
+    "streamlit>=1.40.0",
 ]

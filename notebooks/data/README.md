@@ -3,7 +3,7 @@
 ## File
 - `dashboard_all_in_one.parquet`
 - Location: `notebooks/data/dashboard_all_in_one.parquet`
-- Current shape: `74,835 rows x 175 columns`
+- Current shape: `74,835 rows x 182 columns`
 
 ## Goal
 This dataset is the final, dashboard-ready test-set table for model output + explainability.
@@ -41,8 +41,24 @@ Examples:
 - `owner_type`
 - `mau_group`
 - `mau`
+- `engagement_rate`
 - `retention_rate`
 - `monthly_stream30s_per_mau`
+- `engagement_median`
+- `retention_median`
+- `is_high_engagement`
+- `is_high_retention`
+- `is_high_both`
+- `segment`
+
+### 3b) Benchmark/segment columns (added)
+These columns carry the group benchmark each playlist was compared against (by `mau_group`):
+- `engagement_median`: median engagement benchmark for that playlist's MAU group
+- `retention_median`: median retention benchmark for that playlist's MAU group
+- `is_high_engagement`: `1/0` flag for playlist engagement >= group median
+- `is_high_retention`: `1/0` flag for playlist retention >= group median
+- `is_high_both`: `1/0` flag where both high engagement and high retention are true
+- `segment`: readable segment label (for example, "High Engagement + High Retention")
 
 ### 4) Model input feature columns
 Prefix: `feat__`
@@ -74,7 +90,8 @@ Show:
 Use:
 - Distribution of `pred_proba`
 - Precision/recall style slices by threshold
-- Error analysis with `is_correct`, split by `owner_type`, `mau_group`, etc.
+- Error analysis with `is_correct`, split by `owner_type`, `mau_group`, `segment`, etc.
+- Benchmark views: compare `engagement_rate` vs `engagement_median` and `retention_rate` vs `retention_median`
 
 ### Explainability views
 - Top global drivers: mean absolute `shap__*`
