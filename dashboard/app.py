@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import json
-import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 from pathlib import Path
@@ -9,11 +8,18 @@ from utils.db import (
     get_playlist_list,
     get_playlist_detail,
     get_global_shap_importance,
-    get_segment_stats,
     get_total_count,
     get_feature_stats,
 )
 from utils.explainer import get_explanation
+from utils.explorer import (
+    EXPLORER_PAGE_SIZE,
+    clamp_page,
+    format_playlist_option,
+    get_dashboard_tabs,
+    get_page_offset,
+    get_total_pages,
+)
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -348,28 +354,53 @@ with st.sidebar:
 
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
-tab_explore, tab_global, tab_segments = st.tabs([
-    "EXPLORER",
-    "GLOBAL IMPORTANCE",
-    "SEGMENTS",
-])
+tab_explore, tab_global = st.tabs(list(get_dashboard_tabs()))
 
 
 # ════════════════════════════════════════════════════════════════════════════
 # TAB 1: PLAYLIST EXPLORER
 # ════════════════════════════════════════════════════════════════════════════
 with tab_explore:
+    current_page = clamp_page(
+        page=st.session_state.get("explorer_page", 1),
+        total_count=total,
+        page_size=EXPLORER_PAGE_SIZE,
+    )
+    st.session_state["explorer_page"] = current_page
+    total_pages = get_total_pages(total_count=total, page_size=EXPLORER_PAGE_SIZE)
+    offset = get_page_offset(page=current_page, total_count=total, page_size=EXPLORER_PAGE_SIZE)
+
     playlists = get_playlist_list(
         owner_type=owner_val,
         mau_group=mau_val,
         pred_label=pred_label_val,
         search_uri=search_val,
-        limit=100,
+        limit=EXPLORER_PAGE_SIZE,
+        offset=offset,
     )
 
     if playlists.empty:
         st.info("No playlists match the current filters.")
     else:
+        controls_left, controls_right = st.columns([1, 3])
+        next_page = controls_left.number_input(
+            "Page",
+            min_value=1,
+            max_value=total_pages,
+            value=current_page,
+            step=1,
+            key="explorer_page_input",
+        )
+        if next_page != current_page:
+            st.session_state["explorer_page"] = next_page
+            st.rerun()
+
+        page_start = offset + 1
+        page_end = min(offset + EXPLORER_PAGE_SIZE, total)
+        controls_right.caption(
+            f"Showing playlists {page_start:,}-{page_end:,} of {total:,} matches"
+        )
+
         # Compact display table — truncate URIs for readability
         display_df = playlists.copy()
         display_df["P(Success)"] = display_df["pred_proba"].apply(lambda x: f"{x:.1%}")
@@ -378,22 +409,35 @@ with tab_explore:
         display_df = display_df[["row_id", "URI", "P(Success)", "Pred", "owner_type", "mau"]]
         display_df.columns = ["ID", "URI (last 20)", "P(Success)", "Predicted", "Owner", "MAU"]
 
-        st.caption("Click a row to inspect it")
-        event = st.dataframe(
+        st.caption("Browse the current page, then use the picker below to open one playlist explicitly.")
+        st.dataframe(
             display_df,
             use_container_width=True,
             height=320,
             hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row",
+        )
+
+        playlist_options = playlists.to_dict("records")
+        playlist_lookup = {
+            str(row["row_id"]): row
+            for row in playlist_options
+        }
+        page_option_ids = list(playlist_lookup)
+
+        if st.session_state.get("selected_playlist_id") not in page_option_ids:
+            st.session_state["selected_playlist_id"] = None
+
+        selected_id = st.selectbox(
+            "Open playlist from this page",
+            options=page_option_ids,
+            format_func=lambda row_id: format_playlist_option(playlist_lookup[row_id]),
+            index=None,
+            placeholder="Choose a playlist to inspect",
+            key="selected_playlist_id",
         )
 
         # ── Playlist detail ──────────────────────────────────────────────
-        selected_rows = event.selection.rows if event.selection else []
-
-        if selected_rows:
-            selected_idx = selected_rows[0]
-            selected_id = str(playlists.iloc[selected_idx]["row_id"])
+        if selected_id:
 
             st.markdown("---")
             st.markdown('<p class="section-label">PLAYLIST DETAIL</p>', unsafe_allow_html=True)
@@ -599,71 +643,3 @@ with tab_global:
         xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
     )
     st.plotly_chart(fig_global, use_container_width=True)
-
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# TAB 3: SEGMENT ANALYSIS
-# ════════════════════════════════════════════════════════════════════════════
-with tab_segments:
-    st.markdown('<p class="section-label">SEGMENT ANALYSIS</p>', unsafe_allow_html=True)
-    st.markdown("### Prediction Patterns by Segment")
-    st.caption("How does the model score different playlist segments?")
-
-    seg_df = get_segment_stats()
-    overall_avg_prob = seg_df["avg_pred_proba"].mean()
-    overall_success_pct = seg_df["pct_predicted_success"].mean()
-
-    # Top metrics
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Avg P(Success)", f"{overall_avg_prob:.1%}")
-    col2.metric("Segments", len(seg_df))
-    col3.metric("Total Playlists", f"{seg_df['n'].sum():,}")
-
-    st.markdown("")
-
-    # Segment table
-    display_seg = seg_df.copy()
-    display_seg["avg_pred_proba"] = display_seg["avg_pred_proba"].apply(lambda x: f"{x:.1%}")
-    display_seg["pct_predicted_success"] = display_seg["pct_predicted_success"].apply(lambda x: f"{x:.1%}")
-    display_seg["n"] = display_seg["n"].apply(lambda x: f"{x:,}")
-    display_seg.columns = ["Owner", "MAU Group", "Count", "Avg P(Success)", "% Predicted Success"]
-
-    st.dataframe(display_seg, use_container_width=True, hide_index=True)
-
-    # Avg predicted probability by segment chart
-    st.markdown("---")
-    st.markdown('<p class="section-label">AVG PREDICTED PROBABILITY BY SEGMENT</p>', unsafe_allow_html=True)
-
-    seg_df["segment"] = seg_df["owner_type"] + " / " + seg_df["mau_group"]
-    bar_colors = ["#1DB954" if p >= overall_avg_prob else "#f85149" for p in seg_df["avg_pred_proba"]]
-
-    fig_seg = go.Figure(go.Bar(
-        x=seg_df["segment"],
-        y=seg_df["avg_pred_proba"],
-        marker_color=bar_colors,
-        text=seg_df["avg_pred_proba"].apply(lambda v: f"{v:.1%}"),
-        textposition="outside",
-        textfont=dict(family="IBM Plex Mono", size=13, color="#c9d1d9"),
-    ))
-    fig_seg.add_hline(
-        y=overall_avg_prob,
-        line_dash="dot",
-        line_color="#484f58",
-        annotation_text=f"Overall: {overall_avg_prob:.1%}",
-        annotation_font=dict(family="IBM Plex Mono", size=11, color="#8b949e"),
-    )
-    fig_seg.update_layout(
-        **PLOTLY_LAYOUT,
-        height=350,
-        margin=dict(l=50, r=20, t=10, b=60),
-        yaxis=dict(
-            range=[0, 1],
-            tickformat=".0%",
-            showgrid=True,
-            gridcolor="#21262d",
-            tickfont=dict(family="IBM Plex Mono", size=11, color="#8b949e"),
-        ),
-        xaxis=dict(tickfont=dict(family="IBM Plex Mono", size=11, color="#c9d1d9")),
-    )
-    st.plotly_chart(fig_seg, use_container_width=True)
