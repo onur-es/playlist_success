@@ -2,6 +2,11 @@ import json
 import os
 import anthropic
 
+try:
+    import streamlit as st
+except ImportError:  # pragma: no cover - streamlit is installed for the app runtime
+    st = None
+
 SYSTEM_PROMPT = (
     "You are a music analytics expert explaining ML model predictions to a "
     "non-technical stakeholder at a music streaming company. Write in a warm, "
@@ -56,9 +61,23 @@ _BINARY_PREFIXES = (
 _client: anthropic.Anthropic | None = None
 
 
+def _get_api_key() -> str | None:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if api_key:
+        return api_key
+
+    if st is None:
+        return None
+
+    try:
+        return st.secrets["ANTHROPIC_API_KEY"]
+    except Exception:
+        return None
+
+
 def _get_client() -> anthropic.Anthropic | None:
     global _client
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = _get_api_key()
     if not api_key:
         return None
     if _client is None:
@@ -158,7 +177,7 @@ Write a 2-3 sentence explanation of why the model thinks this playlist is {predi
 def get_explanation(playlist: dict, feat_stats: dict | None = None) -> str:
     client = _get_client()
     if client is None:
-        return "_Set ANTHROPIC_API_KEY in your .env file to enable AI explanations._"
+        return "_Set ANTHROPIC_API_KEY in your .env file or Streamlit secrets to enable AI explanations._"
 
     prompt = build_explanation_prompt(playlist, feat_stats)
 

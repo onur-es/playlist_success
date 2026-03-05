@@ -13,6 +13,7 @@ wheels/
 .env
 .cache
 .DS_Store
+.streamlit/secrets.toml
 
 # Notebook artifacts
 .ipynb_checkpoints/
