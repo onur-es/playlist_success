@@ -362,6 +362,18 @@ button[data-baseweb="tab"] {
 .stButton > button[kind="secondary"]:disabled {
     opacity: 0.3 !important;
 }
+
+/* Force ProgressColumn bars to green */
+td[data-testid="column-P(Success)"] progress {
+    accent-color: #1DB954 !important;
+}
+td[data-testid="column-P(Success)"] [role="progressbar"] div {
+    background-color: #1DB954 !important;
+}
+/* Glide data grid progress bar override */
+[data-testid="stDataFrame"] canvas + div [style*="background"] {
+    background-color: #1DB954 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
